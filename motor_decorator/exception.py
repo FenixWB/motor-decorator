@@ -8,3 +8,11 @@ class MotorDecoratorClustersNotRegistered(Exception):
 
 class MotorDecoratorViewError(Exception):
     """If received wrong type of subclass of AbstractView"""
+
+
+class MotorDecoratorValueError(ValueError):
+    ...
+
+
+class MotorDecoratorTypeError(TypeError):
+    ...
