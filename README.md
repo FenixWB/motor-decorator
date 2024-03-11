@@ -98,20 +98,43 @@ def init_clusters():
         port=MONGO_PORT_LOCAL,
         response_timeout=5_000
     )
-    profile_clusters(extended_logs=True, log_level="DEBUG")
+    profile_clusters(extended_logs=True, log_level="DEBUG", ping=True)
 
 
-# main.py
-import asyncio
-from internal import some_application
-from config import init_clusters
+init_clusters()
+
+# or
+
+import os
+from motor_decorator import add_cluster, profile_clusters
+
+MONGO_HOST_MAIN = os.getenv("MONGO_HOST_MAIN")
+MONGO_PORT_MAIN = os.getenv("MONGO_PORT_MAIN")
+MONGO_USER_MAIN = os.getenv("MONGO_USER_MAIN")
+MONGO_PASSWORD_MAIN = os.getenv("MONGO_PASSWORD_MAIN")
+
+MONGO_HOST_LOCAL = os.getenv("MONGO_HOST_LOCAL")
+MONGO_PORT_LOCAL = os.getenv("MONGO_PORT_LOCAL")
+MONGO_USER_LOCAL = os.getenv("MONGO_USER_LOCAL")
+MONGO_PASSWORD_LOCAL = os.getenv("MONGO_PASSWORD_LOCAL")
+
+add_cluster(
+    cluster_name="MAIN",
+    username=MONGO_USER_MAIN,
+    password=MONGO_PASSWORD_MAIN,
+    host=MONGO_HOST_MAIN,
+    port=MONGO_PORT_MAIN,
+    response_timeout=10_000
+)
+add_cluster(
+    cluster_name="LOCAL",
+    username=MONGO_USER_LOCAL,
+    password=MONGO_PASSWORD_LOCAL,
+    host=MONGO_HOST_LOCAL,
+    port=MONGO_PORT_LOCAL,
+    response_timeout=5_000
+)
+profile_clusters(extended_logs=True, log_level="DEBUG", ping=True)
 
 
-async def run() -> None:
-    init_clusters()
-    some_application.run()
-
-
-if __name__ == '__main__':
-    asyncio.run(run())
 ```
