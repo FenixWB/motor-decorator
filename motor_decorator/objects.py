@@ -80,12 +80,12 @@ class MotorDecoratorClusterUrl:
         if not isinstance(port, int) and not isinstance(port, str):
             raise MotorDecoratorTypeError(f"Port type must be <int> or valid <str> which can convert to int,"
                                           f" not a '{type(port)}'!")
-        if isinstance(port, int):
-            if not (port < 1 or port > 65535):
+        elif isinstance(port, int):
+            if port < 1 or port > 65535:
                 raise MotorDecoratorValueError(f"Port must be int between 1 to 65535")
         elif isinstance(port, str):
             port = int(port)
-            if not (port < 1 or port > 65535):
+            if port < 1 or port > 65535:
                 raise MotorDecoratorValueError(f"Port must be int between 1 to 65535")
 
     def __repr__(self) -> str:
