@@ -9,7 +9,11 @@ from pymongo import UpdateOne, DeleteOne, InsertOne
 from pymongo.results import BulkWriteResult, DeleteResult, UpdateResult, InsertManyResult, InsertOneResult
 
 from .abstract_view import MotorDecoratorAbstractView
-from .exception import MotorDecoratorCollectionNotFoundError, MotorDecoratorViewError
+from .exception import (
+    MotorDecoratorCollectionNotFoundError,
+    MotorDecoratorViewError,
+    MotorDecoratorClustersNotRegistered
+)
 from .objects import (
     MotorDecoratorClusterName,
     MotorDecoratorDatabaseName,
@@ -55,7 +59,7 @@ class MotorDecoratorController:
     def _get_cluster(self, cluster_name: MotorDecoratorClusterName) -> MotorDecoratorRegisteredCluster:
         registered_cluster = self._clusters.get(cluster_name.name)
         if registered_cluster is None:
-            raise ValueError(f"Cluster with name '{cluster_name}' not exists")
+            raise MotorDecoratorClustersNotRegistered(f"Cluster with name '{cluster_name}' not exists")
         return registered_cluster
 
     async def _ping_cluster(self) -> None:
