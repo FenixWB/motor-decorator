@@ -1,3 +1,6 @@
+from .exception import MotorDecoratorValueError, MotorDecoratorTypeError
+
+
 class MotorDecoratorNameObject:
     def __init__(self, name: str) -> None:
         if not isinstance(name, str):
@@ -53,31 +56,37 @@ class MotorDecoratorIndex:
 class MotorDecoratorClusterUrl:
     url_template = "mongodb://{username}:{password}@{host}:{port}/"
 
-    def __init__(self, username: str, password: str, host: str, port: int) -> None:
+    def __init__(self, username: str, password: str, host: str, port: int | str) -> None:
         self._validate_arguments(username, password, host, port)
         self.url = self.url_template.format(username=username, password=password, host=host, port=port)
 
     @staticmethod
     def _validate_arguments(username: str, password: str, host: str, port: int) -> None:
         if not isinstance(username, str):
-            raise TypeError(f"Username type must be string, not a '{type(username)}'!")
+            raise MotorDecoratorTypeError(f"Username type must be string, not a '{type(username)}'!")
         elif not username:
-            raise ValueError(f"Username must be non-empty string!")
+            raise MotorDecoratorValueError(f"Username must be non-empty string!")
 
         if not isinstance(password, str):
-            raise TypeError(f"Password type must be string, not a '{type(password)}'!")
+            raise MotorDecoratorTypeError(f"Password type must be string, not a '{type(password)}'!")
         elif not password:
-            raise ValueError(f"Password must be must be non-empty string!")
+            raise MotorDecoratorValueError(f"Password must be must be non-empty string!")
 
         if not isinstance(host, str):
-            raise TypeError(f"Host type must be string, not a '{type(host)}'!")
+            raise MotorDecoratorTypeError(f"Host type must be string, not a '{type(host)}'!")
         elif not host:
-            raise ValueError(f"Host must be non-empty string!")
+            raise MotorDecoratorValueError(f"Host must be non-empty string!")
 
-        if not isinstance(port, int):
-            raise TypeError(f"Port type must be int, not a '{type(port)}'!")
-        elif not port:
-            raise ValueError(f"Port must be int between 1 to 65535")
+        if not isinstance(port, int) and not isinstance(port, str):
+            raise MotorDecoratorTypeError(f"Port type must be <int> or valid <str> which can convert to int,"
+                                          f" not a '{type(port)}'!")
+        if isinstance(port, int):
+            if not (port < 1 or port > 65535):
+                raise MotorDecoratorValueError(f"Port must be int between 1 to 65535")
+        elif isinstance(port, str):
+            port = int(port)
+            if not (port < 1 or port > 65535):
+                raise MotorDecoratorValueError(f"Port must be int between 1 to 65535")
 
     def __repr__(self) -> str:
         attributes_string = tuple(f"{attr}={value}" for attr, value in self.__dict__.items())
