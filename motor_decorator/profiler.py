@@ -9,7 +9,7 @@ def add_cluster(
         username: str,
         password: str,
         host: str,
-        port: int,
+        port: int | str,
         response_timeout: int = 10_000,
         **kwargs
 ) -> None:
@@ -52,7 +52,7 @@ class MotorDecoratorProfiler:
             username: str,
             password: str,
             host: str,
-            port: int,
+            port: int | str,
             response_timeout: int,
             **kwargs
     ) -> None:

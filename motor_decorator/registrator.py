@@ -43,7 +43,7 @@ class MotorDecoratorClustersRegistrator:
             username: str,
             password: str,
             host: str,
-            port: int,
+            port: int | str,
             response_timeout: int,
             kwargs: dict
     ) -> None:
@@ -64,7 +64,7 @@ class MotorDecoratorClustersRegistrator:
             username: str,
             password: str,
             host: str,
-            port: int,
+            port: int | str,
             response_timeout: int,
             kwargs: dict
     ) -> MotorDecoratorRegisteredCluster:
