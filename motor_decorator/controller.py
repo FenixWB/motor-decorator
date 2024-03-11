@@ -9,7 +9,11 @@ from pymongo import UpdateOne, DeleteOne, InsertOne
 from pymongo.results import BulkWriteResult, DeleteResult, UpdateResult, InsertManyResult, InsertOneResult
 
 from .abstract_view import MotorDecoratorAbstractView
-from .exception import MotorDecoratorCollectionNotFoundError, MotorDecoratorViewError
+from .exception import (
+    MotorDecoratorCollectionNotFoundError,
+    MotorDecoratorViewError,
+    MotorDecoratorClustersNotRegistered
+)
 from .objects import (
     MotorDecoratorClusterName,
     MotorDecoratorDatabaseName,
@@ -48,22 +52,36 @@ class MotorDecoratorController:
             **cluster.kwargs
         )
         self._is_test = test
-        asyncio.create_task(self._ping_cluster())
         self._init_database(database_name)
         self.logger = logger
 
     def _get_cluster(self, cluster_name: MotorDecoratorClusterName) -> MotorDecoratorRegisteredCluster:
         registered_cluster = self._clusters.get(cluster_name.name)
         if registered_cluster is None:
-            raise ValueError(f"Cluster with name '{cluster_name}' not exists")
+            raise MotorDecoratorClustersNotRegistered(f"Cluster with name '{cluster_name}' not exists")
         return registered_cluster
 
-    async def _ping_cluster(self) -> None:
-        if self._is_test is False:
-            server_info = await self._client.server_info()
+    @classmethod
+    def ping_clusters(cls) -> None:
+        loop = asyncio.get_event_loop()
+        clusters = cls._clusters
 
-            if self.EXTENDED_LOGS:
-                self.logger.info(server_info)
+        if clusters:
+            for cluster_name, registered_cluster in clusters.items():
+                client = AsyncIOMotorClient(
+                    registered_cluster.url,
+                    serverSelectionTimeoutMS=registered_cluster.timeout,
+                    **registered_cluster.kwargs
+                )
+                if loop.is_closed():
+                    loop = asyncio.new_event_loop()
+                    server_info = loop.run_until_complete(client.server_info())
+                    loop.close()
+                else:
+                    server_info = loop.run_until_complete(client.server_info())
+                logger.info(server_info)
+        else:
+            raise MotorDecoratorClustersNotRegistered("Clusters are not registered")
 
     def _init_database(self, database_name: MotorDecoratorDatabaseName) -> None:
         if isinstance(self._client, AgnosticClient):

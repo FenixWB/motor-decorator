@@ -25,9 +25,9 @@ def add_cluster(
     )
 
 
-def profile_clusters(extended_logs: bool = False, log_level: str | None = None) -> None:
+def profile_clusters(extended_logs: bool = False, log_level: str | None = None, ping: bool = False) -> None:
     """Prepare motor decorator to work"""
-    MotorDecoratorProfiler.profile(extended_logs, log_level)
+    MotorDecoratorProfiler.profile(extended_logs, log_level, ping)
 
 
 def change_log_level(log_level: str) -> None:
@@ -67,11 +67,13 @@ class MotorDecoratorProfiler:
         )
 
     @classmethod
-    def profile(cls, extended_logs: bool, log_level: str | None) -> None:
+    def profile(cls, extended_logs: bool, log_level: str | None, ping: bool) -> None:
         cls._set_extend_logs_state(extended_logs)
         if log_level:
             cls.change_log_level(log_level)
         cls._check_registered_clusters()
+        if ping:
+            cls._ping_clusters()
 
     @classmethod
     def _set_extend_logs_state(cls, extended_logs: bool) -> None:
@@ -92,3 +94,7 @@ class MotorDecoratorProfiler:
             raise MotorDecoratorClustersNotRegistered(
                 "Clusters not registered for controller. Register clusters in config file from 'add_cluster' method"
             )
+
+    @classmethod
+    def _ping_clusters(cls) -> None:
+        cls.settings.ping_clusters()

@@ -16,3 +16,7 @@ class MotorDecoratorSettings:
     @staticmethod
     def extend_logs_info(turn_on: bool) -> None:
         MotorDecoratorController.EXTENDED_LOGS = turn_on
+
+    @staticmethod
+    def ping_clusters() -> None:
+        MotorDecoratorController.ping_clusters()
