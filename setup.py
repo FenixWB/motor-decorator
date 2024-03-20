@@ -12,7 +12,7 @@ setup(
     url="https://github.com/FeltsAzn/motor-decorator",
     license="LICENSE",
     install_requires=[
-        "pydantic>=2.6.3",
+        "pydantic>=2.5.3",
         "motor>=3.3.2"
     ],
 )

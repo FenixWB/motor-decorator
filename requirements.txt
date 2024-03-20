@@ -1,7 +1,7 @@
 annotated-types==0.6.0
 dnspython==2.6.1
 motor==3.3.2
-pydantic==2.6.3
+pydantic==2.5.3
 pydantic_core==2.16.3
 pymongo==4.6.2
 typing_extensions==4.10.0
