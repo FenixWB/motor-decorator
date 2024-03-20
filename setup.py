@@ -3,7 +3,7 @@ from setuptools import find_packages, setup
 setup(
     name="motor-decorator",
     packages=find_packages(),
-    version="0.0.3.1",
+    version="0.0.3.2",
     description="Decorator for motor library",
     author="Timur Galiev",
     author_email="timkin12321@gmail.com",
