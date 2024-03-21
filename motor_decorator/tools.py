@@ -29,6 +29,8 @@ class MotorDecoratorTools:
                         )
                         logger.error(error_message)
                         retries -= 1
+                        await asyncio.sleep(delay)
+                        delay *= 2
                     finally:
                         if retries == 0:
                             error_message = (
@@ -37,8 +39,6 @@ class MotorDecoratorTools:
                             )
                             logger.exception(error_message)
                             return
-                        await asyncio.sleep(delay)
-                        delay *= 2
 
             return wrap
 
