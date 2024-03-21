@@ -1,11 +1,11 @@
 import asyncio
 import logging
-from typing import Type
+from typing import Type, Coroutine, Any
 
 from bson import ObjectId
 from motor.core import AgnosticCollection, AgnosticCursor, AgnosticCommandCursor, AgnosticDatabase, AgnosticClient
 from motor.motor_asyncio import AsyncIOMotorClient
-from pymongo import UpdateOne, DeleteOne, InsertOne
+from pymongo import UpdateOne, DeleteOne, InsertOne, ReturnDocument
 from pymongo.results import BulkWriteResult, DeleteResult, UpdateResult, InsertManyResult, InsertOneResult
 
 from .abstract_view import MotorDecoratorAbstractView
@@ -61,6 +61,16 @@ class MotorDecoratorController:
             raise MotorDecoratorClustersNotRegistered(f"Cluster with name '{cluster_name}' not exists")
         return registered_cluster
 
+    def _init_database(self, database_name: MotorDecoratorDatabaseName) -> None:
+        if isinstance(self._client, AgnosticClient):
+            self._database = self._client[database_name.name]
+            if self.EXTENDED_LOGS:
+                self.logger.debug(f"The '{database_name.name}' database has been initialized")
+
+        if self._is_test is False:
+            if not isinstance(self._database, AgnosticDatabase):
+                raise AttributeError(f"Mongo DB cluster and database not set!")
+
     @classmethod
     def ping_clusters(cls) -> None:
         loop = asyncio.get_event_loop()
@@ -83,16 +93,6 @@ class MotorDecoratorController:
         else:
             raise MotorDecoratorClustersNotRegistered("Clusters are not registered")
 
-    def _init_database(self, database_name: MotorDecoratorDatabaseName) -> None:
-        if isinstance(self._client, AgnosticClient):
-            self._database = self._client[database_name.name]
-            if self.EXTENDED_LOGS:
-                self.logger.debug(f"The '{database_name.name}' database has been initialized")
-
-        if self._is_test is False:
-            if not isinstance(self._database, AgnosticDatabase):
-                raise AttributeError(f"Mongo DB cluster and database not set!")
-
     @property
     def clusters(self) -> dict[str, MotorDecoratorRegisteredCluster]:
         return self._clusters
@@ -109,14 +109,13 @@ class MotorDecoratorController:
     def collection(self) -> AgnosticCollection:
         return self._collection
 
-    @db_tools.retry(logger)
     async def __call__(self, collection: MotorDecoratorCollectionName, check_existence: bool = False) -> None:
         if check_existence:
-            await self.check_collection(collection)
+            await self._check_collection(collection)
         self._init_collection(collection)
 
     @db_tools.retry(logger)
-    async def check_collection(self, collection: MotorDecoratorCollectionName) -> None:
+    async def _check_collection(self, collection: MotorDecoratorCollectionName) -> None:
         collections = set(await self._database.list_collection_names())
         if collection.name in collections:
             return
@@ -131,7 +130,6 @@ class MotorDecoratorController:
         if self.EXTENDED_LOGS:
             self.logger.debug(f"The '{collection.name}' collection has been initialized")
 
-    @db_tools.retry(logger)
     async def check_indexes(self, *required_indexes: MotorDecoratorIndex) -> None:
         exist_indexes = self._collection.list_indexes()
 
@@ -175,7 +173,6 @@ class MotorDecoratorController:
             f" MRO: {view_class.mro()}"
         )
 
-    @db_tools.retry(logger)
     async def do_insert_one(
             self,
             document: dict,
@@ -183,30 +180,28 @@ class MotorDecoratorController:
             raw_response: bool = False,
             **kwargs
     ) -> bool | ObjectId | InsertOneResult:
-        response = await self._collection.insert_one(document=document, **kwargs)
+        response: InsertOneResult = await self._execute(self._collection.insert_one(document=document, **kwargs))
         if return_id:
             return response.inserted_id
         elif raw_response:
             return response
         return response.acknowledged
 
-    @db_tools.retry(logger)
     async def do_insert_many(
             self,
-            docs: list[dict],
+            records: list[dict],
             ordered: bool = True,
             return_id: bool = False,
             raw_response: bool = False,
             **kwargs
     ) -> bool | list[ObjectId] | InsertManyResult:
-        response = await self._collection.insert_many(documents=docs, ordered=ordered, **kwargs)
+        response = await self._execute(self._collection.insert_many(documents=records, ordered=ordered, **kwargs))
         if return_id:
             return response.inserted_ids
         elif raw_response:
             return response
         return response.acknowledged
 
-    @db_tools.retry(logger)
     async def do_update_one(
             self,
             condition: dict,
@@ -216,19 +211,18 @@ class MotorDecoratorController:
             raw_response: bool = False,
             **kwargs
     ) -> int | ObjectId | UpdateResult:
-        response = await self._collection.update_one(
+        response = await self._execute(self._collection.update_one(
             filter=condition,
             update=updating_fields,
             upsert=upsert,
             **kwargs
-        )
+        ))
         if return_id:
             return response.upserted_id
         elif raw_response:
             return response
         return response.modified_count
 
-    @db_tools.retry(logger)
     async def do_update_many(
             self,
             condition: dict,
@@ -237,14 +231,13 @@ class MotorDecoratorController:
             raw_response: bool = False,
             **kwargs
     ) -> int | list[ObjectId] | UpdateResult:
-        response = await self._collection.update_many(filter=condition, update=updating_fields, **kwargs)
+        response = await self._execute(self._collection.update_many(filter=condition, update=updating_fields, **kwargs))
         if return_id:
             return response.upserted_id
         elif raw_response:
             return response
         return response.modified_count
 
-    @db_tools.retry(logger)
     async def do_find_one(
             self,
             condition: dict,
@@ -252,12 +245,11 @@ class MotorDecoratorController:
             view_class: Type[MotorDecoratorAbstractView] | None = None,
             **kwargs
     ) -> dict | None | MotorDecoratorAbstractView:
-        response = await self._collection.find_one(filter=condition, projection=projection, **kwargs)
-        if view_class and response:
-            return self._wrap_entity(view_class, response)
-        return response
+        record = await self._execute(self._collection.find_one(filter=condition, projection=projection, **kwargs))
+        if view_class and record:
+            return self._wrap_entity(view_class, record)
+        return record
 
-    @db_tools.retry(logger)
     async def do_find_many(
             self,
             condition: dict,
@@ -265,11 +257,10 @@ class MotorDecoratorController:
             view_class: Type[MotorDecoratorAbstractView] | None = None,
             **kwargs
     ) -> list[dict] | list[MotorDecoratorAbstractView]:
-        response = self._collection.find(filter=condition, projection=projection, **kwargs)
-        docs = await self._unpack_iterable(response, view_class)
-        return docs
+        cursor = self._collection.find(filter=condition, projection=projection, **kwargs)
+        records = await self._execute(self._unpack_iterable(cursor, view_class))
+        return records
 
-    @db_tools.retry(logger)
     async def do_find_one_and_update(
             self,
             condition: dict,
@@ -277,45 +268,51 @@ class MotorDecoratorController:
             upsert: bool = False,
             projection: dict | None = None,
             view_class: Type[MotorDecoratorAbstractView] | None = None,
+            return_before: bool = True,
             **kwargs,
     ) -> dict | MotorDecoratorAbstractView | None:
-        response = await self._collection.find_one_and_update(
+        if return_before is True:
+            return_document = ReturnDocument.BEFORE
+        else:
+            return_document = ReturnDocument.AFTER
+
+        if upsert:
+            return_document = ReturnDocument.AFTER
+
+        response = await self._execute(self._collection.find_one_and_update(
             filter=condition,
             update=updating_fields,
             projection=projection,
             upsert=upsert,
+            return_document=return_document,
             **kwargs
-        )
+        ))
         if view_class and response:
             return self._wrap_entity(view_class, response)
         return response
 
-    @db_tools.retry(logger)
     async def do_delete_one(self, condition: dict, raw_response: bool = False, **kwargs) -> int | DeleteResult:
-        response = await self._collection.delete_one(filter=condition, **kwargs)
+        response = await self._execute(self._collection.delete_one(filter=condition, **kwargs))
         if raw_response:
             return response
         return response.deleted_count
 
-    @db_tools.retry(logger)
     async def do_delete_many(self, condition: dict, raw_response: bool = False, **kwargs) -> int | DeleteResult:
-        response = await self._collection.delete_many(filter=condition, **kwargs)
+        response = await self._execute(self._collection.delete_many(filter=condition, **kwargs))
         if raw_response:
             return response
         return response.deleted_count
 
-    @db_tools.retry(logger)
     async def do_aggregate(
             self,
             pipeline: list[dict],
             view_class: Type[MotorDecoratorAbstractView] | None = None,
             **kwargs
     ) -> list[dict] | list[MotorDecoratorAbstractView]:
-        response = self._collection.aggregate(pipeline, **kwargs)
-        records = await self._unpack_iterable(response, view_class)
+        cursor = self._collection.aggregate(pipeline, **kwargs)
+        records = await self._execute(self._unpack_iterable(cursor, view_class))
         return records
 
-    @db_tools.retry(logger)
     async def do_bulk_write(
             self,
             operations: list[UpdateOne | DeleteOne | InsertOne],
@@ -324,7 +321,7 @@ class MotorDecoratorController:
             raw_response: bool = False,
             **kwargs
     ) -> bool | list[ObjectId] | BulkWriteResult:
-        response = await self._collection.bulk_write(operations, ordered=ordered, **kwargs)
+        response = await self._execute(self._collection.bulk_write(operations, ordered=ordered, **kwargs))
         if return_id:
             return response.upserted_ids  # type: ignore
         elif raw_response:
@@ -332,7 +329,11 @@ class MotorDecoratorController:
 
         return response.acknowledged
 
-    @db_tools.retry(logger)
     async def get_document_count(self, condition: dict, **kwargs) -> int:
-        response = await self._collection.count_documents(condition, **kwargs)
+        response = await self._execute(self._collection.count_documents(condition, **kwargs))
         return response
+
+    @db_tools.retry(logger)
+    async def _execute(self, coroutine: Coroutine) -> Any:
+        results = await coroutine
+        return results
