@@ -19,7 +19,8 @@ from .objects import (
     MotorDecoratorDatabaseName,
     MotorDecoratorCollectionName,
     MotorDecoratorIndex,
-    MotorDecoratorRegisteredCluster
+    MotorDecoratorRegisteredCluster,
+    MotorDecoratorRetryParameters
 )
 from .tools import db_tools
 
@@ -184,7 +185,9 @@ class MotorDecoratorController:
         response: InsertOneResult = await self._execute(
             function=self._collection.insert_one,
             document=document,
-            duplicate_skip=duplicate_skip,
+            retry_param=MotorDecoratorRetryParameters(
+                skip_duplicate_key_error_info=duplicate_skip
+            ),
             **kwargs
         )
         if return_id:
@@ -206,7 +209,9 @@ class MotorDecoratorController:
             function=self._collection.insert_many,
             documents=records,
             ordered=ordered,
-            duplicate_skip=duplicate_skip,
+            retry_param=MotorDecoratorRetryParameters(
+                skip_duplicate_key_error_info=duplicate_skip
+            ),
             **kwargs
         )
         if return_id:
@@ -230,7 +235,9 @@ class MotorDecoratorController:
             filter=condition,
             update=updating_fields,
             upsert=upsert,
-            duplicate_skip=duplicate_skip,
+            retry_param=MotorDecoratorRetryParameters(
+                skip_duplicate_key_error_info=duplicate_skip
+            ),
             **kwargs
         )
         if return_id:
@@ -252,7 +259,9 @@ class MotorDecoratorController:
             function=self._collection.update_many,
             filter=condition,
             update=updating_fields,
-            duplicate_skip=duplicate_skip,
+            retry_param=MotorDecoratorRetryParameters(
+                skip_duplicate_key_error_info=duplicate_skip
+            ),
             **kwargs)
         if return_id:
             return response.upserted_id
@@ -313,7 +322,9 @@ class MotorDecoratorController:
             projection=projection,
             upsert=upsert,
             return_document=return_document,
-            duplicate_skip=duplicate_skip,
+            retry_param=MotorDecoratorRetryParameters(
+                skip_duplicate_key_error_info=duplicate_skip
+            ),
             **kwargs
         )
         if view_class and response:
@@ -363,7 +374,9 @@ class MotorDecoratorController:
             function=self._collection.bulk_write,
             requests=operations,
             ordered=ordered,
-            duplicate_skip=duplicate_skip,
+            retry_param=MotorDecoratorRetryParameters(
+                skip_duplicate_key_error_info=duplicate_skip
+            ),
             **kwargs
         )
         if return_id:
