@@ -178,11 +178,13 @@ class MotorDecoratorController:
             document: dict,
             return_id: bool = False,
             raw_response: bool = False,
+            duplicate_skip: bool = False,
             **kwargs
     ) -> bool | ObjectId | InsertOneResult:
         response: InsertOneResult = await self._execute(
             function=self._collection.insert_one,
             document=document,
+            duplicate_skip=duplicate_skip,
             **kwargs
         )
         if return_id:
@@ -197,12 +199,14 @@ class MotorDecoratorController:
             ordered: bool = True,
             return_id: bool = False,
             raw_response: bool = False,
+            duplicate_skip: bool = False,
             **kwargs
     ) -> bool | list[ObjectId] | InsertManyResult:
         response = await self._execute(
             function=self._collection.insert_many,
             documents=records,
             ordered=ordered,
+            duplicate_skip=duplicate_skip,
             **kwargs
         )
         if return_id:
@@ -218,6 +222,7 @@ class MotorDecoratorController:
             return_id: bool = False,
             upsert: bool = False,
             raw_response: bool = False,
+            duplicate_skip: bool = False,
             **kwargs
     ) -> int | ObjectId | UpdateResult:
         response = await self._execute(
@@ -225,6 +230,7 @@ class MotorDecoratorController:
             filter=condition,
             update=updating_fields,
             upsert=upsert,
+            duplicate_skip=duplicate_skip,
             **kwargs
         )
         if return_id:
@@ -239,12 +245,14 @@ class MotorDecoratorController:
             updating_fields: dict,
             return_id: bool = False,
             raw_response: bool = False,
+            duplicate_skip: bool = False,
             **kwargs
     ) -> int | list[ObjectId] | UpdateResult:
         response = await self._execute(
             function=self._collection.update_many,
             filter=condition,
             update=updating_fields,
+            duplicate_skip=duplicate_skip,
             **kwargs)
         if return_id:
             return response.upserted_id
@@ -287,6 +295,7 @@ class MotorDecoratorController:
             projection: dict | None = None,
             view_class: Type[MotorDecoratorAbstractView] | None = None,
             return_before: bool = True,
+            duplicate_skip: bool = False,
             **kwargs,
     ) -> dict | MotorDecoratorAbstractView | None:
         if return_before is True:
@@ -304,6 +313,7 @@ class MotorDecoratorController:
             projection=projection,
             upsert=upsert,
             return_document=return_document,
+            duplicate_skip=duplicate_skip,
             **kwargs
         )
         if view_class and response:
@@ -346,12 +356,14 @@ class MotorDecoratorController:
             ordered: bool = True,
             return_id: bool = False,
             raw_response: bool = False,
+            duplicate_skip: bool = False,
             **kwargs
     ) -> bool | list[ObjectId] | BulkWriteResult:
         response = await self._execute(
             function=self._collection.bulk_write,
             requests=operations,
             ordered=ordered,
+            duplicate_skip=duplicate_skip,
             **kwargs
         )
         if return_id:
