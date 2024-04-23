@@ -190,6 +190,10 @@ class MotorDecoratorController:
             ),
             **kwargs
         )
+
+        if response is None:
+            return False
+
         if return_id:
             return response.inserted_id
         elif raw_response:
@@ -214,6 +218,9 @@ class MotorDecoratorController:
             ),
             **kwargs
         )
+        if response is None:
+            return False
+
         if return_id:
             return response.inserted_ids
         elif raw_response:
@@ -240,6 +247,9 @@ class MotorDecoratorController:
             ),
             **kwargs
         )
+        if response is None:
+            return 0
+
         if return_id:
             return response.upserted_id
         elif raw_response:
@@ -263,6 +273,9 @@ class MotorDecoratorController:
                 skip_duplicate_key_error_info=duplicate_skip
             ),
             **kwargs)
+        if response is None:
+            return 0
+
         if return_id:
             return response.upserted_id
         elif raw_response:
@@ -337,6 +350,9 @@ class MotorDecoratorController:
             filter=condition,
             **kwargs
         )
+        if response is None:
+            return 0
+
         if raw_response:
             return response
         return response.deleted_count
@@ -347,6 +363,9 @@ class MotorDecoratorController:
             filter=condition,
             **kwargs
         )
+        if response is None:
+            return 0
+
         if raw_response:
             return response
         return response.deleted_count
@@ -379,6 +398,9 @@ class MotorDecoratorController:
             ),
             **kwargs
         )
+        if response is None:
+            return False
+
         if return_id:
             return response.upserted_ids  # type: ignore
         elif raw_response:
@@ -392,7 +414,7 @@ class MotorDecoratorController:
             filter=condition,
             **kwargs
         )
-        return response
+        return 0 if response is None else response
 
     @db_tools.retry(logger)
     async def _execute(self, function: Callable, *args, **kwargs) -> Any:
