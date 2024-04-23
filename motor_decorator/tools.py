@@ -3,6 +3,8 @@ import functools
 import logging
 from typing import Callable, Any
 
+from pymongo.errors import DuplicateKeyError
+
 
 class MotorDecoratorTools:
     info_format: str = "[%(asctime)s] [%(name)s] [%(levelname)s]: %(message)s [%(filename)s/%(funcName)s:%(lineno)d]"
@@ -20,6 +22,17 @@ class MotorDecoratorTools:
                 while retries:
                     try:
                         return await func(*args, **kwargs)
+                    except DuplicateKeyError as ex:
+                        error_message = (
+                            f"Database connection error (retry={retries % 4}). "
+                            f"execution function: <{func.__name__}>, "
+                            f"exception class: <{ex.__class__.__name__}>, "
+                            f"exception description: {ex}"
+                        )
+
+                        if kwargs.get("duplicate_skip", False) is False:
+                            logger.error(error_message)
+                        return
                     except Exception as ex:
                         error_message = (
                             f"Database connection error (retry={retries % 4}). "
