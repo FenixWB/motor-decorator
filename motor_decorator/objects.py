@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from .exception import MotorDecoratorValueError, MotorDecoratorTypeError
 
 
@@ -109,3 +111,9 @@ class MotorDecoratorRegisteredCluster:
     def __repr__(self) -> str:
         attributes_string = tuple(f"{attr}={value}" for attr, value in self.__dict__.items())
         return f"{self.__class__.__name__}({', '.join(attributes_string)})"
+
+
+@dataclass
+class MotorDecoratorRetryParameters:
+    """DTO to configure retry decorator for db tools class"""
+    skip_duplicate_key_error_info: bool = False

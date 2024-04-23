@@ -5,6 +5,8 @@ from typing import Callable, Any
 
 from pymongo.errors import DuplicateKeyError
 
+from .objects import MotorDecoratorRetryParameters
+
 
 class MotorDecoratorTools:
     info_format: str = "[%(asctime)s] [%(name)s] [%(levelname)s]: %(message)s [%(filename)s/%(funcName)s:%(lineno)d]"
@@ -19,6 +21,8 @@ class MotorDecoratorTools:
                 retries = init_retries
                 delay = timeout
 
+                retry_param = kwargs.pop("retry_param", MotorDecoratorRetryParameters())
+
                 while retries:
                     try:
                         return await func(*args, **kwargs)
@@ -30,7 +34,7 @@ class MotorDecoratorTools:
                             f"exception description: {ex}"
                         )
 
-                        if kwargs.get("duplicate_skip", False) is False:
+                        if retry_param.skip_duplicate_key_error_info is False:
                             logger.error(error_message)
                         return
                     except Exception as ex:
